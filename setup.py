@@ -7,8 +7,8 @@ setup(
     description='Various utilities and functions to make Vinculum stuff easier',
     author='Isaac FLath',
     license='MIT',
-    install_requires=['fastcore','nbformat','requests','pandas','numpy','scipy','shelve','matplotlib'],
-    setup_requires=['fastcore','nbformat','requests','pandas','numpy','scipy','shelve','matplotlib'],
-    tests_require=['fastcore','nbformat','requests','pandas','numpy','scipy','shelve','matplotlib'],
+    install_requires=['fastcore','nbformat','requests','pandas','numpy','scipy','matplotlib'],
+    setup_requires=['fastcore','nbformat','requests','pandas','numpy','scipy','matplotlib'],
+    tests_require=['fastcore','nbformat','requests','pandas','numpy','scipy','matplotlib'],
     test_suite='tests',
 )
