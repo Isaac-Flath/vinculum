@@ -1,7 +1,3 @@
-__all__ = ['create', 'append', 'delete', 'print_keys', 'get_stat', 'get_stats', 'print_best', 'graph_stat',
-           'graph_stats']
-
-
 import shelve
 import matplotlib.pyplot as plt
 import os
