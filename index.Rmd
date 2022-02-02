@@ -1,0 +1,59 @@
+---
+title: "Vinculum"
+output:
+  html_document:
+    number_sections: true
+    fig_caption: true
+    toc: true
+    toc_float: true
+    fig_width: 7
+    fig_height: 4.5
+    theme: cosmo
+    highlight: tango
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{css custom_css, echo = FALSE}
+#header {
+    background-image: linear-gradient(120deg, lightblue, blue);
+}
+.title.toc-ignore {
+  font-weight: 1000;
+}
+h1{
+    background-image: linear-gradient(120deg, lightblue, blue);
+}
+```
+
+Vinculum is a data discovery organization the seeks to understand financial influence and how that relates to politics and legal situations, and how those two areas interect.  We are completely non-commercial and do this on our free time out of an interest in the topic (personal project).
+
+Check out our articles below!
+
+# IRS 527 Filings
+
+**Article Location:** [https://rpubs.com/iflath/irs-527-filings](https://rpubs.com/iflath/irs-527-filings)
+
+**Author:** Isaac Flath
+
+A work in progress that shows download, cleaning, loading, and basic exploration of IRS 527 filings data (forms 8871 and 8872).  This data is pulled direct from the IRS website.  527 Organizations are political organizations with various tax benefits and they must report on contributions, expenditures, related entities, director/officers, and other information.
+
+# Second Article we Write
+
+**Article Location:** TBD
+
+**Author:** TBD
+
+A short description of what is covered in the article.'
+
+# Third Article we Write
+
+**Article Location:** TBD
+
+**Author:** TBD
+
+A short description of what is covered in the article.
+
