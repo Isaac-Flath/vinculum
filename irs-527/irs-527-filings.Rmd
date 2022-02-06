@@ -352,12 +352,17 @@ for(file_pref in names(load_map)){
   if(table_name %notin% tables){
     df <- vroom(file.path(output_path,paste(file_pref,".txt")),
                 col_names=column_map[[file_pref]])
+    if('insert_datetime' %in% names(df)){
+      df <- separate(df, insert_datetime, 
+                     into = c("insert_date", "insert_time"), 
+                     sep = " (?=[^ ]+$)")}
     dbWriteTable(con, table_name, df, overwrite=TRUE)
   }
 }
 
 dbListTables(con)
 ```
+
 
 # File Metadata {.tabset .tabset-fade .tabset-pills}
 

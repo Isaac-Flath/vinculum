@@ -1,0 +1,121 @@
+---
+title: "IRS 527 Filings Analysis"
+author: "Isaac Flath"
+date: '2022-02-01T21:13:14-05:00'
+output:
+  html_document:
+    number_sections: no
+    fig_caption: yes
+    toc: yes
+    toc_float: yes
+    fig_width: 7
+    fig_height: 4.5
+    theme: cosmo
+    highlight: tango
+    code_folding: hide
+categories: Politics
+tags:
+- IRS
+- 527 Orgs
+---
+
+```{css custom_css, echo = FALSE}
+#header {
+    background-image: linear-gradient(120deg, lightblue, blue);
+}
+.title.toc-ignore {
+  font-weight: 1000;
+}
+h1{
+    background-image: linear-gradient(120deg, lightblue, blue);
+}
+```
+
+```{r knitr_setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error=FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+knitr::opts_chunk$set(out.width = "100%", fig.height=6, split=FALSE, fig.align = 'default')
+options(dplyr.summarise.inform = FALSE)
+```
+
+# Introduction
+
+# Setup {.tabset .tabset-fade .tabset-pills}
+
+## Imports
+
+These are all standard imports that I use. I haven't filtered out ones not used in this particular report, but these are my standard imports I start with on projects.
+
+```{r imports, results='hide'}
+library(DBI)
+
+# general visualisation
+library('ggplot2') # visualisation
+library('scales') # visualisation
+library('patchwork') # visualisation
+library('RColorBrewer') # visualisation
+library('corrplot') # visualisation
+library('ggthemes') # visualisation
+library('viridis') # visualisation
+library('gt') # table styling
+
+# general data manipulation
+library('dplyr') # data manipulation
+library('readr') # input/output
+library('vroom') # input/output
+library('tibble') # data wrangling
+library('tidyr') # data wrangling
+library('stringr') # string manipulation
+library('forcats') # factor manipulation
+library('janitor') # cleaning
+library('lubridate') # Date wrangling
+
+
+# specific
+library('glue') # encoding
+library('naniar') # missing values
+#library('gganimate') # visualisation
+library('ggrepel') # visualisation
+library('grid') # visualisation
+library('GGally') # visualisation
+library('ggforce') # visualisation
+#library('ggtext') # visualisation
+library(rlang) # eval string as symbols
+library(lazyeval) # eval string as symbols
+```
+
+## Paths
+
+```{r}
+
+```
+
+## UDFs
+
+```{r udf}
+`%notin%` <- Negate(`%in%`)
+```
+
+## Connect to DB
+
+Here we connect to our sqlite database.  This database was created in [a previous article](https://rpubs.com/iflath/irs-527-filings), so you will need to use code from there if you want to recreate this post.
+
+```{r}
+db_path <- "~/code_outputs/irs-527-filings/irs.sqlite"
+
+con <- dbConnect(RSQLite::SQLite(), db_path)
+tables <- dbListTables(con)
+```
+
+
+
+
+
+
+
+
+
+
+
+
