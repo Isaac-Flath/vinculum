@@ -39,6 +39,28 @@ knitr::opts_chunk$set(out.width = "100%", fig.height=6, split=FALSE, fig.align =
 options(dplyr.summarise.inform = FALSE)
 ```
 
+# Introduction
+
+In this post I will be diving into parsing and looking at filings that 527 political organizations submit to the IRS. I am looking into this as the start of a larger project to understand, measure, and predict the effects of financial influence on politics.
+
+If that sounds interesting to you, follow me on twitter so you can see the next one!
+
+<https://twitter.com/isaac_flath>
+
+The main thing you that may be nice to know (but not required) when reading this article is what a 527 organization is. All of the data we are looking at will be regarding 527 organizations, so if you don't know what they are nothing will have much context.
+
+Here's what a 527 organization is, courtesy of wikipedia.
+
+> A **527 organization** or **527 group** is a type of U.S. [tax-exempt organization](https://en.wikipedia.org/wiki/Tax-exempt_organization "Tax-exempt organization") organized under Section 527 of the U.S. [Internal Revenue Code](https://en.wikipedia.org/wiki/Internal_Revenue_Code "Internal Revenue Code") ([26 U.S.C.](https://en.wikipedia.org/wiki/Internal_Revenue_Code "Internal Revenue Code") [§ 527](https://www.law.cornell.edu/uscode/text/26/527)). A 527 group is created primarily to influence the selection, [nomination](https://en.wikipedia.org/wiki/Nomination "Nomination"), [election](https://en.wikipedia.org/wiki/Election "Election"), appointment or defeat of candidates to federal, state or local public office.
+>
+> Technically, almost all political committees, including state, local, and federal candidate committees, traditional [political action committees](https://en.wikipedia.org/wiki/Political_action_committee "Political action committee") (PACs), "[Super PACs](https://en.wikipedia.org/wiki/Political_action_committee#Super_PACs "Political action committee")", and political parties are "527s". However, in common practice the term is usually applied only to such organizations that are not regulated under state or federal campaign finance laws because they do not ["expressly advocate"](https://en.wikipedia.org/wiki/Issue_advocacy_ads "Issue advocacy ads") for the election or defeat of a candidate or party.
+>
+> There are no upper limits on contributions to 527s and no restrictions on who may contribute. There are no spending limits imposed on these organizations. The organizations must register with the [Internal Revenue Service](https://en.wikipedia.org/wiki/Internal_Revenue_Service "Internal Revenue Service") (IRS), publicly disclose their donors and file periodic reports of contributions and expenditures.^[\[1\]](https://en.wikipedia.org/wiki/527_organization#cite_note-1)^
+>
+> Because they may not [expressly advocate](https://en.wikipedia.org/wiki/Issue_advocacy_ads "Issue advocacy ads") for specific candidates or coordinate with any candidate's campaign, many 527s are used to raise money to spend on [issue advocacy](https://en.wikipedia.org/wiki/Issue_advocacy_ads "Issue advocacy ads") and voter mobilization. Examples of 527s are [Swift Boat Veterans for Truth](https://en.wikipedia.org/wiki/Swift_Vets_and_POWs_for_Truth "Swift Vets and POWs for Truth"), [The Media Fund](https://en.wikipedia.org/wiki/The_Media_Fund "The Media Fund"), [America Coming Together](https://en.wikipedia.org/wiki/America_Coming_Together "America Coming Together"), the [Progress for America Voter Fund](https://en.wikipedia.org/wiki/Progress_for_America_Voter_Fund "Progress for America Voter Fund"), and the [Secretary of State Project](https://en.wikipedia.org/wiki/Secretary_of_State_Project "Secretary of State Project").^[\[2\]](https://en.wikipedia.org/wiki/527_organization#cite_note-2)^
+
+Let's get started!
+
 # Setup {.tabset .tabset-fade .tabset-pills}
 
 ## Imports
@@ -189,7 +211,6 @@ out_files <- list()
 for(line in line_starts){
   fpath <- file.path(output_path,paste(line,'.txt'))
   if (file.exists(fpath)) {
-    print(paste("File Already Exists:",fpath))
     next
     } else {
     out_files[[line]] <- file(fpath,'w')
@@ -275,8 +296,8 @@ two <- c('record_type','form_type','form_id_number','period_begin_date','period_
          'business_address_2','business_address_city','business_address_state',
          'business_address_zip_code','business_address_zip_ext','qtr_indicator',
          'monthly_rpt_month','pre_elect_type','pre_or_post_elect_date',
-         'pre_or_post_elect_state','sched_a_ind','total_sched_a','sched_b_ind','total_sched_b',
-         'insert_datetime')
+         'pre_or_post_elect_state','sched_a_ind','total_sched_a','sched_b_ind',
+         'total_sched_b','insert_datetime')
 
 b <- c('record_type','form_id_number','sched_b_id','org_name','ein','recipient_name',
        'recipient_address_1','recipient_address_2','recipient_address_city',
@@ -379,11 +400,7 @@ df <- df %>%
   mutate(across(c(exempt_state, business_address_state,contact_address_state,custodian_address_state,
                   mailing_address_state), as.factor)) %>%
   mutate(across(c(established_date,material_change_date), ymd))
-```
 
-Let's take a quick look at the names of the columns we have:
-
-```{r}
 names(df)
 ```
 
@@ -391,16 +408,15 @@ names(df)
 
 -   Each form submission gets a unique form_id.
 
--   I *think* a unique organization can be identified by the EIN number
+-   I *think* a unique organization can be identified by the EIN number. It's certainly very close to that - this will be useful in figuring out how to collapse down amendments.
 
 ```{r}
-#,organization_name,form_id_number
 
 p1 <- df %>% 
   select(ein) %>%
   count(ein) %>%
   ggplot(aes(n)) +
-  geom_histogram() + 
+  geom_histogram(fill = "violet") + 
   xlim(0,5) + 
   labs(title="EINs")  
 
@@ -408,7 +424,7 @@ p2 <- df %>%
   select(organization_name) %>%
   count(organization_name) %>%
   ggplot(aes(n)) +
-  geom_histogram() + 
+  geom_histogram(fill = "orange") + 
   xlim(0,5) + 
   labs(title="Organization Names")
 
@@ -418,17 +434,10 @@ p3 <- df %>%
   group_by(ein) %>%
   summarise(n=n_distinct(organization_name)) %>%
   ggplot(aes(x=n)) +
-  geom_histogram() +
+  geom_histogram(fill = 'darkgreen') +
   labs(title="Organization Names Per EIN")
 
 (p1 + p2) / p3
-```
-
--   Each form submission gets a unique form_id.
-
-```{r}
-
-
 ```
 
 ### Null Values
@@ -441,7 +450,7 @@ Null values are a good place to start. While I can get an idea of what my missin
 
 -   It is a bit interesting that established date is null, and I would be curious when that value isn't required.
 
-```{r 8871_nanviz, fig.height=3}
+```{r 8871_nanviz, fig.height=6}
 df %>% 
   sample_frac(0.2) %>% 
   naniar::vis_miss()
@@ -477,8 +486,16 @@ library(qdap)
 
 term_count <- freq_terms(df$purpose, 50,stopwords=tm::stopwords("english"))
 
-# Plot term_count
-plot(term_count)
+term_count %>%
+  arrange(FREQ) %>%
+  mutate(WORD=factor(WORD,levels=WORD)) %>%
+  ggplot(aes(x=WORD,y=FREQ,fill=FREQ)) +
+  geom_bar(stat='identity') +
+  coord_flip() + 
+  theme_minimal() +
+  theme(legend.position = "none") + 
+  labs(title="Top 50 Words in Purpose")
+
 ```
 
 ### Entities
@@ -486,6 +503,8 @@ plot(term_count)
 Olson Hagel & Fishburn LLP is dominating this list. They are a firm specializing in political law.
 
 I will be doing some more research on exactly what services they provide and what their level of involvement is.
+
+no\@email is a very common email address.
 
 ```{r}
 
@@ -496,9 +515,11 @@ p3 <- categorical_plot_cnt(df,"e_mail_address","Email",20)
 (p1 + p2) / p3
 ```
 
-### Geography
+### Location
 
-```{r fig.height=20}
+We see that a lot of the geographic files line up here, which is good. A much deeper analysis on organization locations is warranted, but this is just about getting a quick peek.
+
+```{r fig.height=8}
 
 p1 <- categorical_plot_cnt(df,"business_address_state","Business Adress State",10)
 p2 <- categorical_plot_cnt(df,"business_address_city","Business Adress City",10)
@@ -546,11 +567,13 @@ Companies are required to submit their Directors and Officers along side the 887
 ```{r 8871_directors}
 df <- dbGetQuery(con, 'SELECT * FROM directors_officers_8871')
 df <- df %>% select(-X14)
+
+names(df)
 ```
 
 ### Null Values
 
-```{r 8871_directors_nanviz, fig.height=3}
+```{r 8871_directors_nanviz, fig.height=6}
 df %>% 
   sample_frac(0.2) %>% 
   naniar::vis_miss()
@@ -559,6 +582,10 @@ df %>%
 ### Titles
 
 -   Most frequent job title is treasurer
+
+-   The second most common is candidate, which means candidates are directly involved in the organization. Certainly not surprising.
+
+-   I am interested in how Director/Officer is defined, as I would not have thought Secretary would qualify but it's a big category.
 
 ```{r 8871_directors_barviz_title, fig.height=3}
 df %>% 
@@ -578,7 +605,7 @@ df %>%
 
 ### Names
 
--    top 10 are directors/officers in over 100 entities. This seems to be strong evidence that these entities are highly related in some way (since it's unlikely these people are truly significantly involved in over 100 truly distinct organizations.
+-   top 10 are directors/officers in over 100 entities. This seems to be strong evidence that these entities are highly related in some way (since it's unlikely these people are truly significantly involved in over 100 truly distinct organizations.
 
 -   It is possible that these really highly involved members are consultants of some kind. It would be interesting to understand how involved they are and what level of influence they have if that is the case.
 
@@ -607,6 +634,8 @@ As part of the 8871 submission they must also submit related entities to the 527
 ```{r 8871_related}
 df <- dbGetQuery(con, 'SELECT * FROM related_entities_8871')
 df <- df %>% select(-X14)
+
+names(df)
 ```
 
 ### Null Values
@@ -681,20 +710,24 @@ EAIN are the Election Authority Identification numbers listed on the 8871 form.
 
 ```{r 8871_eain}
 df <- dbGetQuery(con, 'SELECT * FROM eain_8871')
+df <- df %>% select(-X6)
+
+names(df)
 ```
 
 ### Null Values
 
-```{r 8871_eain_nanviz, fig.height=4}
+No null values!
+
+```{r 8871_eain_nanviz, fig.height=6}
 df %>% 
-  select(-X6) %>%
   sample_frac(0.2) %>% 
   naniar::vis_miss()
 ```
 
 ### Geographic
 
-For EIN's we see largely the state issued is CA. This is a bit surprising since most of the contribution and expenditures happen in DC, and the the majority of Mailing States is DC for contributions and expenditures.
+For EAIN's we see largely the state issued is CA. This is a bit surprising since most of the contribution and expenditures happen in DC, and the the majority of Mailing States is DC for contributions and expenditures.
 
 Organizations are founded in CA, but the money flows through DC. Is there an advantage to getting the EAIN issues in CA? Or are there more amendments if you get your EAIN issued in CA? For now I am looking at files individually, but will explore that more later.
 
@@ -714,6 +747,8 @@ df %>%
 
 # 8872 Data
 
+While the 8871 form is about general information about the organization, the 8872 is about reporting spending and expenditures. There are three parts, the main form which covers company information, schedule A's which cover contributions, and schedule B's which cover expenditures.
+
 ## 8872 Main Form {.tabset .tabset-fade .tabset-pills}
 
 ### Query DB
@@ -721,17 +756,21 @@ df %>%
 ```{r 8872_main}
 df <- dbGetQuery(con, 'SELECT * FROM main_8872')
 df <- df %>% select(-X50)
+
+names(df)
 ```
 
 ### Null Values
 
-```{r 8872_nanviz, fig.height=4}
+```{r 8872_nanviz, fig.height=6}
 df %>% 
-  sample_frac(0.2) %>% 
+  sample_n(10000) %>%
   naniar::vis_miss()
 ```
 
 ### Categoricals
+
+We see here there are a lot of form amendments, which we will need to dig in more to understand the proper way to merge these.
 
 ```{r 8872_barviz}
 df <- df %>%
@@ -794,6 +833,8 @@ p8 <- df %>%
 
 ## Schedule A's (8872) {.tabset .tabset-fade .tabset-pills}
 
+Schedule A form is where political organizations report contributions.
+
 ### Query DB
 
 ```{r 8872_sched_a}
@@ -803,9 +844,9 @@ df <- df %>% select(-X18)
 
 ### Null Values
 
-```{r 8872_sched_a_nanviz, fig.height=4}
+```{r 8872_sched_a_nanviz, fig.height=6}
 df %>%
-  sample_n(50000) %>%
+  sample_n(10000) %>%
   naniar::vis_miss()
 ```
 
@@ -814,8 +855,6 @@ df %>%
 We see that the majority of contributions come from DC. You would expect that not to be the case if contributions are coming from the people, since DC doesn't have near the population as other states. This indicates that the majority of contributions probably come from other organizations.
 
 Perhaps when people donate, that money gets passed around so it's hard to tell where your donation money truly went.
-
-We also see large spikes periodically, I suspect these will correlate with election cycles.
 
 ```{r 8872_sched_a_barviz, fig.height=8}
 
@@ -893,6 +932,8 @@ p5 <- df %>%
 
 ### Time
 
+We see large spikes in contributions. I suspect these will correlate with election cycles but will be good to verify that. I would also like to see what else could drive contribution spikes, such as Supreme Court confirmation fights, or high impact bill votes.
+
 ```{r 8872_sched_a_timeviz, fig.height=3}
 df %>%
   select(contribution_date,contribution_amount) %>%
@@ -900,35 +941,42 @@ df %>%
   mutate(contribution_date=ymd(contribution_date)) %>%
   group_by(contribution_date) %>%
   summarise(contribution_amount=sum(contribution_amount)) %>%
-  ggplot(aes(contribution_date, contribution_amount)) +
+  ggplot(aes(contribution_date, contribution_amount,color=contribution_amount)) +
   geom_point() + theme_minimal() + 
-  theme(legend.position = "none",axis.text.x = element_text(angle = 45, vjust = 1.1, hjust=1)) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1.1, hjust=1)) +
   labs(x = "",y = "Contribution Amount", title = "Contribution by Date")
 
 ```
 
 ## Schedule B's (8872) {.tabset .tabset-fade .tabset-pills}
 
+The Schedule B form is where political organizations report expenditures.
+
 ### Query DB
 
 ```{r 8872_sched_b}
 df <- dbGetQuery(con, 'SELECT * FROM schedule_b_8872')
 df <- df %>% select(-X18)
+
+names(df)
 ```
 
 ### Null Values
 
-```{r 8872_sched_b_nanviz, fig.height=4}
+The number of null values on recipient employer and recipient occupation is aggravating. Clearly this is easy information to get regarding the person you are giving money to, but it would be nice to have a cleaner money trail. Of course, that's likely not what political actors want!
+
+```{r 8872_sched_b_nanviz, fig.height=6}
 df %>%
-  sample_n(20000) %>%
-  naniar::vis_miss(50000)
+  sample_n(10000) %>%
+  naniar::vis_miss()
 ```
 
 ### Expenditures
 
-Here we see some evidence that supports our previous guess. The recipient of expenditures is also DC in addition to contributions. So money flows to DC into these political organizations and gets passed around, and the top purpose is a contribution - which far outweighs media buy, political contributions, payroll, CC processing fees, and other costs that would be associated with direct use of funds.
+Here we see some evidence that supports our previous guess. The recipient of expenditures is also DC in addition to contributions. Money flows to DC into these political organizations and gets passed around, and the top purpose is a contribution - which far outweighs media buy, political contributions, payroll, CC processing fees, and other costs that would be associated with direct use of funds.
 
-A lot of the recipients of the money are consultants, though the next 2 largest are "information requested" and "na". You mean to tell me that they requested but were unable to get the job title of the person they were sending money to? That seems likely.
+A lot of the recipients of the money are consultants, though the next 2 largest are "information requested" and "na". You mean to tell me that they requested but were unable to get the job title of the person they were sending money to? That seems unlikely.
 
 ```{r 8872_sched_b_barviz, fig.height=15}
 p1 <- df %>%
@@ -1041,6 +1089,8 @@ p6b <- tmp %>%
 
 ### Time
 
+When we look at expenditures over time we also see a pattern where there are spikes, seeing what they are correlated with will be interesting.
+
 ```{r 8872_sched_b_timeviz, fig.height=3}
 df %>%
   select(expenditure_date,expenditure_amount) %>%
@@ -1048,19 +1098,26 @@ df %>%
   mutate(expenditure_date=ymd(expenditure_date)) %>%
   group_by(expenditure_date) %>%
   summarise(expenditure_amount=sum(expenditure_amount)) %>%
-  ggplot(aes(expenditure_date, expenditure_amount)) +
+  ggplot(aes(expenditure_date, expenditure_amount,color=expenditure_amount)) +
   geom_point() + theme_minimal() + 
-  theme(legend.position = "none",axis.text.x = element_text(angle = 45, vjust = 1.1, hjust=1)) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1.1, hjust=1)) +
   labs(x = "",y = "Expenditure Amount", title = "Expenditure by Date")
 
 ```
 
 # Additional Analysis
 
-# Disconnect from the database
+This post covered parsing the data and a quick peak at each type of data.
 
-Always important to do!
+Stay tuned for the next post where we will cover:
 
-```{r db_disconnect}
+1.  Deep dive into amendments. What gets amended? How to handle amendments? What are amendments correlated with? etc.
+
+2.  Analysis looking across files. In this we looked at each piece of data by itself, but we can do much more by looking at these different types of data together.
+
+Thanks for reading. To see when the next post is published, follow me on twitter at <https://twitter.com/isaac_flath>
+
+```{r db_disconnect, include=FALSE}
 dbDisconnect(con)
 ```
